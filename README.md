@@ -1,5 +1,7 @@
 # About This Repository
 
+THIS FORK IS FOR RESEARCH INTO AMPLITUDE (2016), which (presumably) uses a new version of Forge.
+
 I am keeping track of my research into RB4 customs here.
 
 I am working out the structure of the files in Rock Band 4. These are being documented in the form of 010 Editor Template files, which are in the `010` directory.
