@@ -312,6 +312,7 @@ namespace ForgeTool
 
     static void Usage()
     {
+      Console.WriteLine("FORGE TOOL 2020 (the one with amplitude... and maybe audica/fuser someday???)");
       Console.WriteLine("Usage: ForgeTool.exe <verb> [options]");
       Console.WriteLine("Verbs: ");
       Console.WriteLine("  version");
