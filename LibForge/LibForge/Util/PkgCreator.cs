@@ -46,7 +46,7 @@ SHORTNAMES
       param.Values.Add(new LibOrbisPkg.SFO.Utf8Value("CATEGORY", "ac", 4));
       param.Values.Add(new LibOrbisPkg.SFO.Utf8Value("CONTENT_ID", pkgId, 48));
       param.Values.Add(new LibOrbisPkg.SFO.Utf8Value("FORMAT", "obs", 4));
-      param.Values.Add(new LibOrbisPkg.SFO.Utf8Value("TITLE", description, 128));
+      param.Values.Add(new LibOrbisPkg.SFO.Utf8Value("TITLE", description.Substring(0, Math.Min(description.Length, 127)), 128));
       param.Values.Add(new LibOrbisPkg.SFO.Utf8Value("TITLE_ID", eu ? "CUSA02901" : "CUSA02084", 12));
       param.Values.Add(new LibOrbisPkg.SFO.Utf8Value("VERSION", "01.00", 8));
       var descBytes = Encoding.UTF8.GetBytes(description);
@@ -72,7 +72,7 @@ SHORTNAMES
       return Encoding.UTF8.GetBytes(project);
     }
 
-    public static DataArray MakeMoggDta(DataArray array)
+    public static DataArray MakeMoggDta(DataArray array, float volumeAdjustment)
     {
       var moggDta = new DataArray();
       var trackArray = new DataArray();
@@ -80,8 +80,48 @@ SHORTNAMES
       var trackSubArray = trackArray.AddNode(new DataArray());
       foreach (var child in array.Array("song").Array("tracks").Array(1).Children)
       {
-        if(child is DataArray a && a.Children[1] is DataArray b && b.Count > 0)
-          trackSubArray.AddNode(child);
+        if (child is DataArray a && a.Children[1] is DataArray b && b.Count > 0)
+        {
+          if (a.Symbol(0).Name == "drum")
+          {
+            switch (b.Count)
+            {
+              //Mix0 (2 channel) Whole kit in a stereo stream
+              case 2:
+                trackSubArray.AddNode(DTX.FromDtaString("drum (0 1)"));
+                break;
+              //Mix1 (4 channel) Mono kick, Mono Snare, Stereo Kit
+              case 4:
+                trackSubArray.AddNode(DTX.FromDtaString("drum (0)"));
+                trackSubArray.AddNode(DTX.FromDtaString("drum (1)"));
+                trackSubArray.AddNode(DTX.FromDtaString("drum (2 3)"));
+                break;
+              //Mix2 (5 channel) Mono kick, Stereo Snare, Stereo Kit
+              case 5:
+                trackSubArray.AddNode(DTX.FromDtaString("drum (0)"));
+                trackSubArray.AddNode(DTX.FromDtaString("drum (1 2)"));
+                trackSubArray.AddNode(DTX.FromDtaString("drum (3 4)"));
+                break;
+              //Mix3 (6 channel) Stereo kick, Stereo Snare, Stereo Kit
+              case 6:
+                trackSubArray.AddNode(DTX.FromDtaString("drum (0 1)"));
+                trackSubArray.AddNode(DTX.FromDtaString("drum (2 3)"));
+                trackSubArray.AddNode(DTX.FromDtaString("drum (4 5)"));
+                break;
+              //Mix4 (3 channel) Mono kick, Stereo Snare+Kit
+              case 3:
+                trackSubArray.AddNode(DTX.FromDtaString("drum (0)"));
+                trackSubArray.AddNode(DTX.FromDtaString("drum (1 2)"));
+                break;
+              default:
+                throw new Exception("You have too many or too few drum tracks. What are you doing?");
+            }
+          }
+          else
+          {
+            trackSubArray.AddNode(child);
+          }
+        }
       }
       var totalTracks = array.Array("song").Array("pans").Array(1).Children.Count;
       // Get the last track number. This is based on the assumption that the tracks are in order
@@ -109,11 +149,23 @@ SHORTNAMES
       }
       moggDta.AddNode(trackArray);
       moggDta.AddNode(array.Array("song").Array("pans"));
-      moggDta.AddNode(array.Array("song").Array("vols"));
+
+      // Process (vols (...))
+      var vols = array.Array("song").Array("vols");
+      var newVols = new DataArray();
+      newVols.AddNode(DataSymbol.Symbol("vols"));
+      var volsArray = new DataArray();
+      for (int i = 0; i < vols.Array(1).Count; i++)
+      {
+        volsArray.AddNode(new DataAtom(vols.Array(1).Number(i) + volumeAdjustment));
+      }
+      newVols.AddNode(volsArray);
+      moggDta.AddNode(newVols);
+
       return moggDta;
     }
 
-    public static DLCSong ConvertDLCSong(DataArray songDta, GameArchives.IDirectory songRoot, Action<string> warner)
+    public static DLCSong ConvertDLCSong(DataArray songDta, GameArchives.IDirectory songRoot, Action<string> warner, bool padVols = true)
     {
       var path = songDta.Array("song").Array("name").String(1);
       var hopoThreshold = songDta.Array("song").Array("hopo_threshold")?.Int(1) ?? 170;
@@ -148,7 +200,7 @@ SHORTNAMES
         SongData = songData,
         Lipsync = LipsyncConverter.FromMilo(milo),
         Mogg = songRoot.GetFile(shortname + ".mogg"),
-        MoggDta = MakeMoggDta(songDta),
+        MoggDta = MakeMoggDta(songDta, padVols ? -3.0f : 0.0f),
         MoggSong = DTX.FromDtaString($"(mogg_path \"{songData.Shortname}.mogg\")\r\n(midi_path \"{songData.Shortname}.rbmid\")\r\n"),
         RBMidi = RBMidConverter.ToRBMid(mid, hopoThreshold, warner),
         Artwork = artwork,
@@ -156,12 +208,24 @@ SHORTNAMES
       };
     }
 
+    public static List<SongData.SongData> GetSongMetadatas(GameArchives.IDirectory dlcRoot)
+    {
+      var metas = new List<SongData.SongData>();
+      var dta = DTX.FromPlainTextBytes(dlcRoot.GetFile("songs.dta").GetBytes());
+      for (int i = 0; i < dta.Count; i++)
+      {
+        metas.Add(SongDataConverter.ToSongData(dta.Array(i)));
+      }
+      return metas;
+    }
+
     /// <summary>
     /// Converts an RB3 DLC songs folder into RB4 DLC songs
     /// </summary>
     /// <param name="dlcRoot"></param>
     /// <returns></returns>
-    public static List<DLCSong> ConvertDLCPackage(GameArchives.IDirectory dlcRoot, Action<string> warner = null)
+    public static List<DLCSong> ConvertDLCPackage(
+      GameArchives.IDirectory dlcRoot, bool padVols = true, Action<string> warner = null)
     {
       var dlcSongs = new List<DLCSong>();
       var dta = DTX.FromPlainTextBytes(dlcRoot.GetFile("songs.dta").GetBytes());
@@ -169,7 +233,11 @@ SHORTNAMES
       for(int i = 0; i < dta.Count; i++)
       {
         arr = dta.Array(i);
-        dlcSongs.Add(ConvertDLCSong(arr, dlcRoot.GetDirectory(arr.Array("song").Array("name").String(1).Split('/').Last()), warner));
+        dlcSongs.Add(ConvertDLCSong(
+          arr,
+          dlcRoot.GetDirectory(arr.Array("song").Array("name").String(1).Split('/').Last()),
+          warner,
+          padVols));
       }
       return dlcSongs;
     }
@@ -200,7 +268,7 @@ SHORTNAMES
       using (var rbmid = File.OpenWrite(Path.Combine(songPath, $"{shortname}.rbmid_ps4")))
         RBMidWriter.WriteStream(song.RBMidi, rbmid);
       using (var rbsongFile = File.OpenWrite(Path.Combine(songPath, $"{shortname}.rbsong")))
-        new RBSongWriter(rbsongFile).WriteStream(song.RBSong);
+        new RBSongResourceWriter(rbsongFile).WriteStream(song.RBSong);
       using (var songdtaFile = File.OpenWrite(Path.Combine(songPath, $"{shortname}.songdta_ps4")))
         SongDataWriter.WriteStream(song.SongData, songdtaFile);
       if (song.SongData.AlbumArt)
@@ -210,6 +278,13 @@ SHORTNAMES
       }
     }
 
+    // TODO: Would be faster to have each filetype just estimate its size and use the writer directly.
+    /// <summary>
+    /// Writes a writer to a byte array which backs an FSFile
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="writer"></param>
+    /// <returns></returns>
     private static FSFile WriterToFile(string name, Action<Stream> writer)
     {
       using (var ms = new MemoryStream())
@@ -247,7 +322,7 @@ SHORTNAMES
         s => RBMidWriter.WriteStream(song.RBMidi, s)));
       songDir.Files.Add(WriterToFile(
         $"{shortname}.rbsong",
-        s => new RBSongWriter(s).WriteStream(song.RBSong)));
+        s => new RBSongResourceWriter(s).WriteStream(song.RBSong)));
       songDir.Files.Add(WriterToFile(
         $"{shortname}.songdta_ps4",
         s => SongDataWriter.WriteStream(song.SongData, s)));
@@ -305,12 +380,50 @@ SHORTNAMES
     /// </summary>
     /// <param name="song">Song to use for generation</param>
     /// <returns>16 char id</returns>
-    public static string GenId(DLCSong song)
+    public static string GenId(List<SongData.SongData> datas)
     {
-      var shortname = new Regex("[^a-zA-Z0-9]").Replace(song.SongData.Shortname, "");
-      var pkgName = shortname.ToUpper().Substring(0, Math.Min(shortname.Length, 12)).PadRight(12, 'X');
-      string pkgNum = (song.SongData.SongId % 10000).ToString().PadLeft(4, '0');
-      return pkgName + pkgNum;
+      if (datas.Count == 1)
+      {
+        var data = datas[0];
+        var shortname = new Regex("[^a-zA-Z0-9]").Replace(data.Shortname, "");
+        var pkgName = shortname.ToUpper().Substring(0, Math.Min(shortname.Length, 12)).PadRight(12, 'X');
+        string pkgNum = (data.SongId % 10000).ToString().PadLeft(4, '0');
+        return pkgName + pkgNum;
+      }
+      else
+      {
+        var randPart = new byte[7];
+        new Random((int)datas.Sum(d => d.SongId) + datas.Count).NextBytes(randPart);
+        return "CU" + LibOrbisPkg.Util.Crypto.AsHexCompact(randPart);
+      }
+    }
+
+    public static string GenDesc(List<SongData.SongData> datas)
+    {
+      string str;
+      if (datas.Count == 1)
+      {
+        str = $"Custom: \"{datas[0].Name} - {datas[0].Artist}\""; 
+      }
+      else
+      {
+        var sb = new StringBuilder($"Custom Pack with {datas.Count} songs: ");
+        var first = true;
+        foreach(var song in datas)
+        {
+          if (first)
+          {
+            first = false;
+          }
+          else
+          {
+            sb.Append(", ");
+          }
+          sb.Append($"\"{song.Name} - {song.Artist}\"");
+        }
+        str = sb.ToString();
+      }
+      return str.Substring(0, Math.Min(str.Length, 127));
     }
 
     /// <summary>
@@ -329,16 +442,9 @@ SHORTNAMES
         return;
       }
       var songs = ConvertDLCPackage(con.RootDirectory.GetDirectory("songs"));
-      if(songs.Count > 1)
-      {
-        if ((id?.Length ?? 0) < 16)
-        {
-          throw new Exception("You must provide a 16 char ID if you are building a custom package with multiple songs");
-        }
-      }
-      var identifier = id ?? GenId(songs[0]);
+      var identifier = id ?? GenId(songs.Select(s => s.SongData).ToList());
       var pkgId = eu ? $"EP8802-CUSA02901_00-{identifier}" : $"UP8802-CUSA02084_00-{identifier}";
-      var pkgDesc = $"Custom: \"{songs[0].SongData.Name} - {songs[0].SongData.Artist}\"";
+      var pkgDesc = GenDesc(songs.Select(s => s.SongData).ToList());
       DLCSongsToGP4(songs, pkgId, desc ?? pkgDesc, buildDir, eu);
     }
 
@@ -360,15 +466,10 @@ SHORTNAMES
         songs.AddRange(ConvertDLCPackage(conFile.RootDirectory.GetDirectory("songs")));
       }
 
-      if (songs.Count > 1)
-      {
-        if ((id?.Length ?? 0) < 16)
-        {
-          throw new Exception("You must provide a 16 char ID if you are building a custom package with multiple songs");
-        }
-      }
-      var pkgId = eu ? $"EP8802-CUSA02901_00-{id}" : $"UP8802-CUSA02084_00-{id}";
-      DLCSongsToGP4(songs, pkgId, desc ?? "", buildDir, eu);
+      var identifier = id ?? GenId(songs.Select(s => s.SongData).ToList());
+      var pkgId = eu ? $"EP8802-CUSA02901_00-{identifier}" : $"UP8802-CUSA02084_00-{identifier}";
+      var pkgDesc = desc ?? GenDesc(songs.Select(s => s.SongData).ToList());
+      DLCSongsToGP4(songs, pkgId, pkgDesc, buildDir, eu);
     }
 
     public static void BuildPkg(List<DLCSong> songs, string contentId, string desc, bool eu, string output, Action<string> logger)

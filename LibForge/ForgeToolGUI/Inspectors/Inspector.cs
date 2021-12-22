@@ -1,4 +1,5 @@
-﻿using LibForge.Lipsync;
+﻿using LibForge.CSV;
+using LibForge.Lipsync;
 using LibForge.Mesh;
 using LibForge.Midi;
 using LibForge.Milo;
@@ -36,6 +37,8 @@ namespace ForgeToolGUI
           return new MeshInspector(m);
         case MiloFile mf:
           return new PropertyInspector(mf);
+        case LibForge.Fuser.FuserAsset a:
+          return new Inspectors.FuserInspector(a);
         case object o:
           return new ObjectInspector(obj);
       }
@@ -114,7 +117,9 @@ namespace ForgeToolGUI
       {
         using (var s = i.GetStream())
         {
-          return new RBSongReader(s).Read();
+          var rbsong = new RBSongResource();
+          rbsong.Load(s);
+          return rbsong;
         }
       }
       else if (i.Name.Contains(".gp4"))
@@ -136,6 +141,21 @@ namespace ForgeToolGUI
         using (var s = i.GetStream())
         {
           return MiloFile.ReadFromStream(s);
+        }
+      }
+      else if(i.Name.Contains(".csv"))
+      {
+        using (var s = i.GetStream())
+        {
+
+          return CsvData.LoadFile(s).ToString();
+        }
+      }
+      else if (i.Name.EndsWith(".uexp"))
+      {
+        using (var s = i.GetStream())
+        {
+          return LibForge.Fuser.FuserAsset.Read(s);
         }
       }
       else

@@ -8,8 +8,9 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>ForgeToolGUI</RootNamespace>
     <AssemblyName>ForgeToolGUI</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -20,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -29,6 +31,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>anvil.ico</ApplicationIcon>
@@ -76,6 +79,12 @@
     <Compile Include="Inspectors\ConversionInspector.Designer.cs">
       <DependentUpon>ConversionInspector.cs</DependentUpon>
     </Compile>
+    <Compile Include="Inspectors\FuserInspector.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Inspectors\FuserInspector.Designer.cs">
+      <DependentUpon>FuserInspector.cs</DependentUpon>
+    </Compile>
     <Compile Include="Inspectors\MeshInspector.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -113,6 +122,12 @@
     <Compile Include="Inspectors\TextureInspector.Designer.cs">
       <DependentUpon>TextureInspector.cs</DependentUpon>
     </Compile>
+    <Compile Include="Inspectors\StartupInspector.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Inspectors\StartupInspector.Designer.cs">
+      <DependentUpon>StartupInspector.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Inspectors\SongDataInspector.cs">
@@ -130,6 +145,9 @@
     <EmbeddedResource Include="Inspectors\ConversionInspector.resx">
       <DependentUpon>ConversionInspector.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Inspectors\FuserInspector.resx">
+      <DependentUpon>FuserInspector.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Inspectors\MeshInspector.resx">
       <DependentUpon>MeshInspector.cs</DependentUpon>
     </EmbeddedResource>
@@ -141,6 +159,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Inspectors\ObjectInspector.resx">
       <DependentUpon>ObjectInspector.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Inspectors\StartupInspector.resx">
+      <DependentUpon>StartupInspector.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Inspectors\StringInspector.resx">
       <DependentUpon>StringInspector.cs</DependentUpon>
@@ -156,10 +177,12 @@
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
     </Compile>
     <EmbeddedResource Include="Inspectors\SongDataInspector.resx">
       <DependentUpon>SongDataInspector.cs</DependentUpon>
     </EmbeddedResource>
+    <None Include="app.config" />
     <None Include="OpenTK.dll.config" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">

@@ -28,8 +28,12 @@
     /// </summary>
     private void InitializeComponent()
     {
+      this.components = new System.ComponentModel.Container();
       System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ForgeBrowser));
       this.fileTreeView = new System.Windows.Forms.TreeView();
+      this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
+      this.openToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+      this.extractToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
       this.menuStrip1 = new System.Windows.Forms.MenuStrip();
       this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
       this.openFileMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -44,6 +48,7 @@
       this.convertCONToPKGToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
       this.tabControl1 = new System.Windows.Forms.TabControl();
       this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+      this.contextMenuStrip1.SuspendLayout();
       this.menuStrip1.SuspendLayout();
       ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
       this.splitContainer1.Panel1.SuspendLayout();
@@ -53,13 +58,37 @@
       // 
       // fileTreeView
       // 
+      this.fileTreeView.ContextMenuStrip = this.contextMenuStrip1;
       this.fileTreeView.Dock = System.Windows.Forms.DockStyle.Fill;
       this.fileTreeView.Location = new System.Drawing.Point(0, 0);
       this.fileTreeView.Name = "fileTreeView";
       this.fileTreeView.Size = new System.Drawing.Size(200, 479);
       this.fileTreeView.TabIndex = 0;
+      this.fileTreeView.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.fileTreeView_NodeMouseClick);
       this.fileTreeView.NodeMouseDoubleClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.previewSelectedNode);
       this.fileTreeView.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.fileTreeView_KeyPress);
+      // 
+      // contextMenuStrip1
+      // 
+      this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.openToolStripMenuItem,
+            this.extractToolStripMenuItem});
+      this.contextMenuStrip1.Name = "contextMenuStrip1";
+      this.contextMenuStrip1.Size = new System.Drawing.Size(111, 48);
+      // 
+      // openToolStripMenuItem
+      // 
+      this.openToolStripMenuItem.Name = "openToolStripMenuItem";
+      this.openToolStripMenuItem.Size = new System.Drawing.Size(110, 22);
+      this.openToolStripMenuItem.Text = "Open";
+      this.openToolStripMenuItem.Click += new System.EventHandler(this.openToolStripMenuItem_Click_1);
+      // 
+      // extractToolStripMenuItem
+      // 
+      this.extractToolStripMenuItem.Name = "extractToolStripMenuItem";
+      this.extractToolStripMenuItem.Size = new System.Drawing.Size(110, 22);
+      this.extractToolStripMenuItem.Text = "Extract";
+      this.extractToolStripMenuItem.Click += new System.EventHandler(this.extractToolStripMenuItem_Click);
       // 
       // menuStrip1
       // 
@@ -93,7 +122,7 @@
       this.openFileMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
       this.openFileMenuItem.Size = new System.Drawing.Size(234, 22);
       this.openFileMenuItem.Text = "&Open File...";
-      this.openFileMenuItem.Click += new System.EventHandler(this.toolStripMenuItem2_Click);
+      this.openFileMenuItem.Click += new System.EventHandler(this.openFile_Click);
       // 
       // openPackageMenuItem
       // 
@@ -102,7 +131,7 @@
             | System.Windows.Forms.Keys.O)));
       this.openPackageMenuItem.Size = new System.Drawing.Size(234, 22);
       this.openPackageMenuItem.Text = "Open &Package...";
-      this.openPackageMenuItem.Click += new System.EventHandler(this.openToolStripMenuItem_Click);
+      this.openPackageMenuItem.Click += new System.EventHandler(this.openPackage_Click);
       // 
       // openFolderMenuItem
       // 
@@ -110,7 +139,7 @@
       this.openFolderMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F)));
       this.openFolderMenuItem.Size = new System.Drawing.Size(234, 22);
       this.openFolderMenuItem.Text = "Open &Folder...";
-      this.openFolderMenuItem.Click += new System.EventHandler(this.toolStripMenuItem1_Click);
+      this.openFolderMenuItem.Click += new System.EventHandler(this.openFolder_Click);
       // 
       // toolStripSeparator1
       // 
@@ -152,14 +181,14 @@
       this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.convertCONToPKGToolStripMenuItem});
       this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
-      this.toolsToolStripMenuItem.Size = new System.Drawing.Size(47, 20);
+      this.toolsToolStripMenuItem.Size = new System.Drawing.Size(46, 20);
       this.toolsToolStripMenuItem.Text = "&Tools";
       // 
       // convertCONToPKGToolStripMenuItem
       // 
       this.convertCONToPKGToolStripMenuItem.Name = "convertCONToPKGToolStripMenuItem";
-      this.convertCONToPKGToolStripMenuItem.Size = new System.Drawing.Size(183, 22);
-      this.convertCONToPKGToolStripMenuItem.Text = "Convert CON to PKG";
+      this.convertCONToPKGToolStripMenuItem.Size = new System.Drawing.Size(207, 22);
+      this.convertCONToPKGToolStripMenuItem.Text = "Convert CON files to PKG";
       this.convertCONToPKGToolStripMenuItem.Click += new System.EventHandler(this.convertCONToPKGToolStripMenuItem_Click);
       // 
       // tabControl1
@@ -194,6 +223,7 @@
       // 
       // ForgeBrowser
       // 
+      this.AllowDrop = true;
       this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
       this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
       this.ClientSize = new System.Drawing.Size(812, 503);
@@ -205,6 +235,9 @@
       this.MinimumSize = new System.Drawing.Size(828, 542);
       this.Name = "ForgeBrowser";
       this.Text = "ForgeToolGUI";
+      this.DragDrop += new System.Windows.Forms.DragEventHandler(this.ForgeBrowser_DragDrop);
+      this.DragOver += new System.Windows.Forms.DragEventHandler(this.ForgeBrowser_DragOver);
+      this.contextMenuStrip1.ResumeLayout(false);
       this.menuStrip1.ResumeLayout(false);
       this.menuStrip1.PerformLayout();
       this.splitContainer1.Panel1.ResumeLayout(false);
@@ -233,6 +266,9 @@
     private System.Windows.Forms.SplitContainer splitContainer1;
     private System.Windows.Forms.ToolStripMenuItem toolsToolStripMenuItem;
     private System.Windows.Forms.ToolStripMenuItem convertCONToPKGToolStripMenuItem;
-  }
+        private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
+        private System.Windows.Forms.ToolStripMenuItem openToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem extractToolStripMenuItem;
+    }
 }
 

@@ -31,24 +31,32 @@ namespace ForgeToolGUI
       var args = Environment.GetCommandLineArgs();
       if (args.Length > 1)
       {
-        if (File.Exists(args[1]))
+        LoadAnything(args[1]);
+      } else
+      {
+        OpenTab(new Inspectors.StartupInspector(), "Welcome");
+      }
+    }
+
+    private void LoadAnything(string filename)
+    {
+      if (File.Exists(filename))
+      {
+        var file = GameArchives.Util.LocalFile(filename);
+        if (GameArchives.PFS.PFSPackage.IsPFS(file) != GameArchives.PackageTestResult.NO
+          || GameArchives.Ark.ArkPackage.IsArk(file) != GameArchives.PackageTestResult.NO
+          || GameArchives.STFS.STFSPackage.IsSTFS(file) != GameArchives.PackageTestResult.NO)
         {
-          var file = GameArchives.Util.LocalFile(args[1]);
-          if (GameArchives.PFS.PFSPackage.IsPFS(file) != GameArchives.PackageTestResult.NO
-            || GameArchives.Ark.ArkPackage.IsArk(file) != GameArchives.PackageTestResult.NO
-            || GameArchives.STFS.STFSPackage.IsSTFS(file) != GameArchives.PackageTestResult.NO)
-          {
-            LoadPackage(args[1]);
-          }
-          else
-          {
-            OpenFile(file);
-          }
+          LoadPackage(filename);
         }
-        else if (Directory.Exists(args[1]))
+        else
         {
-          LoadFolder(args[1]);
+          OpenFile(file);
         }
+      }
+      else if (Directory.Exists(filename))
+      {
+        LoadFolder(filename);
       }
     }
 
@@ -140,7 +148,7 @@ namespace ForgeToolGUI
       state.Loaded = false;
     }
 
-    private void openToolStripMenuItem_Click(object sender, EventArgs e)
+    public void openPackage_Click(object sender, EventArgs e)
     {
       OpenFileDialog of = new OpenFileDialog();
       of.Filter = "Supported Packages (*.hdr, *.dat, *.pkg, *_rb3con)|*.hdr;*.dat;*.pkg;*_rb3con|All files|*.*";
@@ -201,7 +209,7 @@ namespace ForgeToolGUI
     }
 
 
-    private void toolStripMenuItem1_Click(object sender, EventArgs e)
+    public void openFolder_Click(object sender, EventArgs e)
     {
       // Sorry.
       var of = new FolderBrowserDialog();
@@ -234,7 +242,7 @@ namespace ForgeToolGUI
       }
     }
 
-    private void toolStripMenuItem2_Click(object sender, EventArgs e)
+    public void openFile_Click(object sender, EventArgs e)
     {
       OpenFileDialog of = new OpenFileDialog();
       if (of.ShowDialog(this) == DialogResult.OK)
@@ -248,10 +256,78 @@ namespace ForgeToolGUI
       if (tabControl1.SelectedTab != null)
         tabControl1.TabPages.Remove(tabControl1.SelectedTab);
     }
-
-    private void convertCONToPKGToolStripMenuItem_Click(object sender, EventArgs e)
+    public void OpenConverter()
     {
       OpenTab(new Inspectors.ConversionInspector(), "CON to PKG Conversion");
+    }
+    private void convertCONToPKGToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+      OpenConverter();
+    }
+
+    private void fileTreeView_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
+    {
+      ActiveNode = e.Node;
+      if (e.Button != MouseButtons.Right)
+        return;
+      extractToolStripMenuItem.Enabled = e.Node.Tag is GameArchives.IFile;
+    }
+
+    private void SaveFile(string prompt, Action<Stream> fileWriter, string fileTypes = null, string defaultPath = null)
+    {
+      using (var sfd = new SaveFileDialog() { Title = prompt, Filter = fileTypes, FileName = defaultPath })
+      {
+        if(sfd.ShowDialog() == DialogResult.OK)
+        {
+          using (var f = File.OpenWrite(sfd.FileName))
+          {
+            fileWriter(f);
+          }
+        }
+      }
+    }
+
+    TreeNode ActiveNode = null;
+    private void extractToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+      if (ActiveNode?.Tag is GameArchives.IFile f)
+      {
+        SaveFile(
+          "Extract file...",
+          s => {
+            using (var stream = f.GetStream()) stream.CopyTo(s);
+          },
+          defaultPath: f.Name);
+      }
+    }
+
+    private void openToolStripMenuItem_Click_1(object sender, EventArgs e)
+    {
+      if (ActiveNode == null) return;
+      if (ActiveNode.GetNodeCount(false) > 0)
+      {
+        ActiveNode.Expand();
+      }
+      else if (ActiveNode.Tag is GameArchives.IFile f)
+      {
+        OpenFile(f);
+      }
+    }
+
+    private void ForgeBrowser_DragOver(object sender, DragEventArgs e)
+    {
+      e.Effect = DragDropEffects.Copy;
+    }
+
+    private void ForgeBrowser_DragDrop(object sender, DragEventArgs e)
+    {
+      if (e.Data.GetData(DataFormats.FileDrop) is string[] files)
+      {
+        foreach(var f in files)
+        {
+          LoadAnything(f);
+        }
+      }
     }
   }
   public class ForgeBrowserState

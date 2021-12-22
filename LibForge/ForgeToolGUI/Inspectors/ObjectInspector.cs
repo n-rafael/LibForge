@@ -6,6 +6,7 @@ using System.Data;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using LibForge.Engine;
 using LibForge.RBSong;
 using LibForge.Midi;
 using System.Collections;
@@ -121,6 +122,11 @@ namespace ForgeToolGUI
     /// </summary>
     void AddArrayNodes(Array arr, string name, TreeNodeCollection nodes)
     {
+      if (arr == null)
+      {
+        nodes.Add(new TreeNode($"{name} (null)"));
+        return;
+      }
       var node = new TreeNode($"{name} ({arr.Length})");
       node.Tag = new Action(() => {
         node.Nodes.Clear();
